@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vargrest"
-version = "1.0.2"
+version = "1.0.3"
 description = "Variogram estimation for ResQml models converted by nrresqml"
 authors = ["Norwegian Computing Center"]
 license = "GPLv3"

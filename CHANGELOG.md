@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.3](https://github.com/equinor/vargrest/compare/v1.0.2...v1.0.3) (2024-01-15)
+
+
+### Bug Fixes
+
+* updated relese-please and bumped numpy and nrresqml version ([406022a](https://github.com/equinor/vargrest/commit/406022a5c216c1dd06959a67c6633f5178132bcc))
+
 ## [1.0.2](https://github.com/equinor/vargrest/compare/v1.0.1...v1.0.2) (2023-09-27)
 
 
