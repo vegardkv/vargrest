@@ -5,18 +5,17 @@ on:
     branches:
       - main
 
-# defaults:
-#   run:
-#     working-directory: src
+permissions:
+  contents: write
+  pull-requests: write
+      
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - uses: google-github-actions/release-please-action@v3
+      - uses: google-github-actions/release-please-action@v4
         id: release
         with:
-          command: manifest
-          package-name: release-please-action
+          release-type: python
+          token: ${{ secrets.GITHUB_TOKEN }}
