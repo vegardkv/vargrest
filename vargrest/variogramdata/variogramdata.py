@@ -47,7 +47,7 @@ class VariogramDataInterface:
         self._z = z - z[0, :, :]  # Make the grid bottom conforming
         self._property_grid = property_grid
 
-        assert archel.dtype == np.int
+        assert np.issubdtype(archel.dtype, int)
         self._archel = archel
 
     def property_grid(self,
@@ -121,9 +121,9 @@ class VariogramDataInterface:
 
         with h5py.File(archel_file) as hf:
             if 'archel' in hf.keys():
-                archel = np.array(hf['archel'], dtype=np.int)
+                archel = np.array(hf['archel'], dtype=int)
             else:
-                archel = np.zeros_like(poro, dtype=np.int)
+                archel = np.zeros_like(poro, dtype=int)
             return VariogramDataInterface(0.0, 0.0, grid_resolution[0], grid_resolution[1], box, z_botconf,
                                           poro, archel)
 
@@ -139,7 +139,7 @@ class VariogramDataInterface:
         archel = extract_property(rq, ijk, 'archel', True)
 
         # Copy remaining arrays from HDF5 file to memory for easier post-processing
-        archel = np.array(archel, dtype=np.int)
+        archel = np.array(archel, dtype=int)
         pillars = np.array(pillars)
 
         # Extract estimation parameter

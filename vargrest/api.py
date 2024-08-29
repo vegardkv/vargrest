@@ -129,7 +129,7 @@ def estimate_variogram_parameters(settings: Union[str, Dict], output_directory: 
     nugget = settings.get('nugget', False)
     archel = settings.get('archel', None)
     cropbox = settings.get('cropbox', None)
-    lagmax = settings.get('lagmax', None)
+    lagmax = settings.get('lagmax', {})
     indicator = settings.get('indicator', None)
     net_to_gross = settings.get('net_to_gross', None)
     sampling = settings.get('sampling', {'mode': 'dense', 'sub_sampling': None})
@@ -236,14 +236,9 @@ def _estimate_empirical(ve: VariogramEstimator, lagmax: Dict[str, int], sampling
                         ) -> NonparametricVariogramEstimate:
     # Determine extent (in lag distances) of empirical variogram estimate
     n_x, n_y, n_z = ve.data().shape
-    if lagmax is None:
-        l_x = int(0.5 * n_x)
-        l_y = int(0.5 * n_y)
-        l_z = int(0.5 * n_z)
-    else:
-        l_x = lagmax["x"]
-        l_y = lagmax["y"]
-        l_z = lagmax["z"]
+    l_x = lagmax.get("x", int(0.5 * n_x))
+    l_y = lagmax.get("y", int(0.5 * n_y))
+    l_z = lagmax.get("z", int(0.5 * n_z))
 
     # Clamp lagmax to the grid (a longer lag has no effect)
     l_x = min(l_x, n_x)
