@@ -153,8 +153,8 @@ def _find_contrib1_cells(empirical_3d, parametric_3d, sigma_estimate, pc=0.5):
     return (
             ~np.isnan(empirical_3d)
             & center
-            & empirical_3d < pc * sigma_estimate
-            & parametric_3d < pc * sigma_estimate
+            & (empirical_3d < pc * sigma_estimate)
+            & (parametric_3d < pc * sigma_estimate)
     )
 
 
