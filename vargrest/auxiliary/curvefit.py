@@ -1,7 +1,9 @@
+from typing import Callable, Any
+
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy.interpolate import griddata, LinearNDInterpolator
-from scipy.integrate import trapz
+from scipy.integrate import trapezoid
 
 
 def fit_3d_field(func, jac, array, resolution, counts, par_guess, bounds, sigma_wt):
@@ -55,7 +57,7 @@ def fit_3d_field(func, jac, array, resolution, counts, par_guess, bounds, sigma_
     counts = counts.ravel()
 
     # Filter out nan entries
-    not_nan = np.ones_like(dep_data, dtype=np.bool)
+    not_nan = np.ones_like(dep_data, dtype=bool)
     if np.all(np.isnan(dep_data)):
         # Not possible to calculate a proper estimate
         return np.full_like(par_guess, fill_value=np.nan), np.nan
@@ -83,7 +85,7 @@ def fit_3d_field(func, jac, array, resolution, counts, par_guess, bounds, sigma_
     popt = curve_fit(func, indep_data, dep_data, sigma=sig, p0=par_guess, bounds=bounds, jac=jac)[0]
 
     # Calculate quality of solution
-    quality = _calculate_quality_1(func, indep_data, dep_data, popt, not_nan, array)
+    quality = _calculate_quality_1(lambda x: func(x, *popt), indep_data, dep_data, not_nan, array)
 
     return popt, quality
 
@@ -107,42 +109,57 @@ def _calculate_quality(func, indep_data, dep_data, parameters, not_nan, array):
     return quality
 
 
-def _calculate_quality_1(func, indep_data, dep_data, parameters, not_nan, array):
+def _calculate_quality_1(
+    func: Callable[[np.ndarray], float],  # (3, N) float -> (N,) float
+    indep_data: np.ndarray,  # (3, N) float
+    dep_data: np.ndarray,  # (N,) float
+    not_nan: np.ndarray,  # (N,) boolean
+    array,  # (K,L,M) float, K * L * M == N
+):
     def _to_3d(a):
         f1 = np.full(array.size, fill_value=np.nan)
         f1[not_nan] = a
         return f1.reshape(array.shape)
 
     dep_data_3d = _to_3d(dep_data)
-    par_est_3d = _to_3d(func(indep_data, *parameters))
-
-    # eval_volume = (par_est_3d < 0.8 * np.max(par_est_3d)) | (dep_data_3d < 0.8 * np.max(dep_data))
-    eval_volume = ~np.isnan(dep_data_3d)
-
-    # B
-    pc = 0.5
-    dep_eval = dep_data_3d[eval_volume]
-    par_eval = par_est_3d[eval_volume]
-
+    par_est_3d = _to_3d(func(indep_data))
     sigma_est = np.median(dep_data)
-    top_v = dep_eval < pc * sigma_est
-    top_p = par_eval < pc * sigma_est
 
-    center = np.zeros_like(eval_volume, dtype=np.bool)
-    cx, cy, cz = center.shape
-    px, py, pz = cx // 4, cy // 4, cz // 4
-    center[px:-px, py:-py, pz:-pz] = True
-
-    top_volume = (top_v | top_p) & center[eval_volume]
-    top_dev = dep_eval[top_volume] - par_eval[top_volume]
-    worst_case = dep_eval[top_volume] - sigma_est
-    top_err = np.abs(top_dev).sum() / np.abs(worst_case).sum()
-
-    sub_err = np.median(np.abs(dep_eval - par_eval)) / sigma_est
+    top_err = _calculate_quality_contribution_1(dep_data_3d, par_est_3d, sigma_est)
+    sub_err = _calculate_quality_contribution_2(dep_data_3d, par_est_3d, sigma_est)
 
     sub_err_contrib = min(sub_err, 0.25)
     top_err_contrib = top_err * 0.75
     return 1.0 - (top_err_contrib + sub_err_contrib)
+
+
+def _calculate_quality_contribution_1(empirical_3d, parametric_3d, sigma_estimate):
+    contrib1_cells = _find_contrib1_cells(empirical_3d, parametric_3d, sigma_estimate)
+    diff = empirical_3d[contrib1_cells] - parametric_3d[contrib1_cells]
+    worst_case = empirical_3d[contrib1_cells] - sigma_estimate
+    return np.abs(diff).sum() / np.abs(worst_case).sum()
+
+
+def _calculate_quality_contribution_2(empirical_3d, parametric_3d, sigma_estimate):
+    contrib2_cells = _find_contrib2_cells(empirical_3d)
+    return np.median(np.abs(empirical_3d[contrib2_cells] - parametric_3d[contrib2_cells])) / sigma_estimate
+
+
+def _find_contrib1_cells(empirical_3d, parametric_3d, sigma_estimate, pc=0.5):
+    center = np.zeros_like(empirical_3d, dtype=bool)
+    cx, cy, cz = center.shape
+    px, py, pz = cx // 4, cy // 4, cz // 4
+    center[px:-px, py:-py, pz:-pz] = True
+    return (
+            ~np.isnan(empirical_3d)
+            & center
+            & (empirical_3d < pc * sigma_estimate)
+            & (parametric_3d < pc * sigma_estimate)
+    )
+
+
+def _find_contrib2_cells(empirical):
+    return ~np.isnan(empirical)
 
 
 def _center_slice(array):
@@ -213,7 +230,7 @@ def find_dominant_direction(variogram_map, grid_resolution):
         hxx_i = np.cos(azi) * hh
         hyy_i = np.sin(azi) * hh
         gg_i = interpolator(hxx_i, hyy_i)
-        integrals[i] = trapz(y=gg_i, x=hh)   # Compute approximate integral from 0 to h_max
+        integrals[i] = trapezoid(y=gg_i, x=hh)   # Compute approximate integral from 0 to h_max
 
     if np.all(np.isnan(integrals)):     # Get index of smallest integral
         return 0.0
