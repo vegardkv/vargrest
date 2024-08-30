@@ -30,6 +30,9 @@ class SummaryDataType(Enum):
     Azimuth = 'azimuth[deg]'
     RVertical = 'r_vertical[m]'
     Sigma = 'sigma[N/A]'
+    QualityX = 'quality_x[<1.0]'
+    QualityY = 'quality_y[<1.0]'
+    QualityZ = 'quality_z[<1.0]'
 
 
 def summarize(pe: ParametricVariogramEstimate, meta_data: Dict[SummaryDataType, Union[str, int, float]]
@@ -41,7 +44,10 @@ def summarize(pe: ParametricVariogramEstimate, meta_data: Dict[SummaryDataType, 
         for d in SummaryDataType
         if d.value in polished_flat
     }
-    summary[SummaryDataType.Quality.value] = pe.quality
+    summary[SummaryDataType.Quality.value] = pe.quality.full
+    summary[SummaryDataType.QualityX.value] = pe.quality.x_slice
+    summary[SummaryDataType.QualityY.value] = pe.quality.y_slice
+    summary[SummaryDataType.QualityZ.value] = pe.quality.z_slice
     # Include meta data
     summary.update({m.value: v for m, v in meta_data.items()})
     return summary
