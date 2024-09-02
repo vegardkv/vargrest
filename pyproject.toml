@@ -13,7 +13,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-nrresqml = {git = "https://github.com/equinor/nrresqml", rev = "v1.1.0"}
+nrresqml = {git = "https://github.com/equinor/nrresqml"}
 scipy = "^1.9.3"
 numpy = "^1.26"
 h5py = "^3.11.0"
