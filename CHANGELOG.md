@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/equinor/vargrest/compare/v1.1.0...v1.1.1) (2024-09-02)
+
+
+### Bug Fixes
+
+* updated lockfile ([299ea4c](https://github.com/equinor/vargrest/commit/299ea4cb0c25193d35699a4ccb24e1314d955be9))
+
 ## [1.1.0](https://github.com/equinor/vargrest/compare/v1.0.3...v1.1.0) (2024-09-02)
 
 
