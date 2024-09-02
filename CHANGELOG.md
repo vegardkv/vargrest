@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/equinor/vargrest/compare/v1.0.3...v1.1.0) (2024-09-02)
+
+
+### Features
+
+* support new Delft3D format ([34fd6ce](https://github.com/equinor/vargrest/commit/34fd6ce55fb0aa47723d9f857ad6419549b82936))
+
 ## [1.0.3](https://github.com/equinor/vargrest/compare/v1.0.2...v1.0.3) (2024-01-15)
 
 
