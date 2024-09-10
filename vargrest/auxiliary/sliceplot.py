@@ -24,13 +24,8 @@ class SlicePlot:
         self._fig = mpl_f.Figure(figsize=(15, 10))
         self._axes = self._fig.subplots(2, 2)
 
-    @property
-    def fig(self):
-        return self._fig
-
-    @property
-    def axes(self):
-        return self._axes
+    def save(self, filename):
+        self._fig.savefig(filename)
 
     def add_parametric_estimate(self, pe: ParametricVariogramEstimate):
         pp = pe.polished_parameters()
@@ -51,21 +46,6 @@ class SlicePlot:
         par_v = (1.0 - par_v) * pp['sigma']['value'] ** 2
         self._add_slices(par_v, '--', label=f'Param. ({pe.family.value})')
 
-    def add_true_variogram(self, rx, ry, rz, azi, true_sd, data_sd):
-        # Simplification: only spherical used for now. Dip forced to 0.0.
-        nx, ny, nz = self._shape
-        dx, dy, dz = self._resolution
-        tru_v = variogram.SphericalVariogram(rx, ry, rz, azi).create_corr_array(nx, dx, ny, dy, nz, dz)
-        tru_v = tru_v[
-            nx // 2 + 1:nx // 2 + nx + 1,
-            ny // 2 + 1:ny // 2 + ny + 1,
-            nz // 2 + 1:nz // 2 + nz + 1,
-        ]
-        apx_v = 2 * (1.0 - tru_v) * data_sd ** 2
-        tru_v = 2 * (1.0 - tru_v) * true_sd ** 2
-        self._add_slices(apx_v, label='True (data sd)')
-        self._add_slices(tru_v, label='True')
-
     def add_non_parametric_estimate(self, ne: NonparametricVariogramEstimate):
         self._add_slices(ne.variogram_map_values(), label='Empirical')
 
@@ -84,22 +64,25 @@ class SlicePlot:
         nx, ny, nz = self._shape
         dx, dy, dz = self._resolution
         # X slice
-        xax = np.arange(-(nx // 2), nx // 2 + 1) * dx
-        self._axes[0, 0].plot(*_filter_nan(xax, _scale(grid[:, ny // 2, nz // 2])), *args, **kwargs)
+        xax = np.arange(0, nx // 2 + 1) * dx
+        yax = _scale(grid[nx // 2:, ny // 2, nz // 2])
+        self._axes[0, 0].plot(*_filter_nan(xax, yax), *args, **kwargs)
         self._axes[0, 0].legend()
         self._axes[0, 0].set_title('X-slice')
         self._axes[0, 0].grid()
 
         # Y slice
-        xax = np.arange(-(ny // 2), ny // 2 + 1) * dy
-        self._axes[0, 1].plot(*_filter_nan(xax, _scale(grid[nx // 2, :, nz // 2])), *args, **kwargs)
+        xax = np.arange(0, ny // 2 + 1) * dy
+        yax = _scale(grid[nx // 2, ny // 2:, nz // 2])
+        self._axes[0, 1].plot(*_filter_nan(xax, yax), *args, **kwargs)
         self._axes[0, 1].legend()
         self._axes[0, 1].set_title('Y-slice')
         self._axes[0, 1].grid()
 
         # Z slice
-        xax = np.arange(-(nz // 2), nz // 2 + 1) * dz
-        self._axes[1, 0].plot(*_filter_nan(xax, _scale(grid[nx // 2, ny // 2, :])), *args, **kwargs)
+        xax = np.arange(0, nz // 2 + 1) * dz
+        yax = _scale(grid[nx // 2, ny // 2, nz // 2:])
+        self._axes[1, 0].plot(*_filter_nan(xax, yax), *args, **kwargs)
         self._axes[1, 0].legend()
         self._axes[1, 0].set_title('Z-slice')
         self._axes[1, 0].grid()

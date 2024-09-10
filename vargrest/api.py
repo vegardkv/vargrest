@@ -5,6 +5,7 @@ import pathlib
 from typing import Dict, Union, Optional, List, Any
 
 from nrresqml.resqml import ResQml
+from vargrest.auxiliary.sliceplot import SlicePlot
 from vargrest.variogramestimation.parametricvariogram import VariogramType
 from vargrest.variogramresults import summary
 from vargrest.variogramestimation.variogramestimation import VariogramEstimator, NonparametricVariogramEstimate
@@ -205,19 +206,29 @@ def estimate_variogram_parameters(settings: Union[str, Dict], output_directory: 
                 kwargs['archels'] = [_arc]
             ve = VariogramEstimator(rd, dz=resample_dz, **kwargs)
 
+            j = len(results)
+            fn_prefix = f'vargrest_output-{j}-'
+
             # Estimate empirical
             ne = _estimate_empirical(ve, lagmax, sampling)
+
+            # Prepare slice plot
+            sp = SlicePlot(*ne.variogram_map_values().shape, *ne.grid_resolution())
+            sp.add_non_parametric_estimate(ne)
+
+            # Save crop box figure to file
+            rd.plot_crop_box(save_figure=True, dir_name=output_directory, file_name=f"{fn_prefix}_crop_")
 
             for _fam in families:
                 # Get parametric variogram estimate
                 sigma_wt = weighting['sigma']
                 pe = ve.estimate_parametric_variogram_xyz(ne, family=_fam, nugget=nugget, sigma_wt=sigma_wt)
+                sp.add_parametric_estimate(pe)
 
                 # Conclude estimation and dump results
-                i = len(results)
-                summary.conclude(rd, ve, pe, ne, output_directory, f'vargrest_output-{i}-', full_qc)
+                summary.conclude(ve, pe, ne, output_directory, f'{fn_prefix}-{_fam.value}-', full_qc)
                 md = {
-                    summary.SummaryDataType.Identifier: i,
+                    summary.SummaryDataType.Identifier: j,
                     summary.SummaryDataType.Family: _fam.value,
                     summary.SummaryDataType.ArchelFilter: _arc,
                     summary.SummaryDataType.Indicator: _ind,
@@ -226,6 +237,8 @@ def estimate_variogram_parameters(settings: Union[str, Dict], output_directory: 
                 }
                 res = summary.summarize(pe, md)
                 results.append(res)
+
+            sp.save(os.path.join(output_directory, f'vargrest_output-{j}-_variogram_slices_.png'))
 
     # Dump summary as csv
     summary.dump_summaries_to_csv(results, os.path.join(output_directory, 'summary.csv'))
