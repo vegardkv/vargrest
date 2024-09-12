@@ -1,12 +1,27 @@
-from typing import Callable, Any
+import dataclasses
+from typing import Callable, Tuple
 
 import numpy as np
 from scipy.optimize import curve_fit
-from scipy.interpolate import griddata, LinearNDInterpolator
+from scipy.interpolate import LinearNDInterpolator
 from scipy.integrate import trapezoid
 
 
-def fit_3d_field(func, jac, array, resolution, counts, par_guess, bounds, sigma_wt):
+@dataclasses.dataclass
+class QualityMeasure:
+    full: float
+    x_slice: float
+    y_slice: float
+    z_slice: float
+
+    @staticmethod
+    def nan():
+        return QualityMeasure(np.nan, np.nan, np.nan, np.nan)
+
+
+def fit_3d_field(
+    func, jac, array, resolution, counts, par_guess, bounds, sigma_wt
+) -> Tuple[np.ndarray, QualityMeasure]:
     """
     Fits a grid-evaluated function to observations.
 
@@ -60,7 +75,7 @@ def fit_3d_field(func, jac, array, resolution, counts, par_guess, bounds, sigma_
     not_nan = np.ones_like(dep_data, dtype=bool)
     if np.all(np.isnan(dep_data)):
         # Not possible to calculate a proper estimate
-        return np.full_like(par_guess, fill_value=np.nan), np.nan
+        return np.full_like(par_guess, fill_value=np.nan), QualityMeasure.nan()
     elif np.any(np.isnan(dep_data)):
         not_nan = np.squeeze(np.nonzero(~np.isnan(dep_data)))
         indep_data = indep_data[:, not_nan]
@@ -90,25 +105,6 @@ def fit_3d_field(func, jac, array, resolution, counts, par_guess, bounds, sigma_
     return popt, quality
 
 
-def _calculate_quality(func, indep_data, dep_data, parameters, not_nan, array):
-    # Calculate quality as the fraction of data points that differ by more than 15% of the empirical max value. Only
-    # consider the three lines through the origin. This gives a more, in a sense, "linear" quality measure than using
-    # the entire error volume. The disadvantage is that errors in azimuth may not always be picked up properly.
-    err = np.full_like(array, fill_value=np.nan)
-    err[not_nan] = np.abs(func(indep_data, *parameters) - dep_data)
-    err_3d = err.reshape(array.shape)
-    x_err, y_err, z_err = _center_slice(err_3d)
-    x_arr, y_arr, z_arr = _center_slice(array)
-    max_val = max(np.nanmax(x_arr), np.nanmax(y_arr), np.nanmax(z_arr))
-    x_err /= max_val
-    y_err /= max_val
-    z_err /= max_val
-    qth = 0.15
-    quality = (x_err < qth).sum() + (y_err < qth).sum() + (z_err < qth).sum()
-    quality /= (~np.isnan(x_err)).sum() + (~np.isnan(y_err)).sum() + (~np.isnan(z_err)).sum()
-    return quality
-
-
 def _calculate_quality_1(
     func: Callable[[np.ndarray], float],  # (3, N) float -> (N,) float
     indep_data: np.ndarray,  # (3, N) float
@@ -128,21 +124,63 @@ def _calculate_quality_1(
     top_err = _calculate_quality_contribution_1(dep_data_3d, par_est_3d, sigma_est)
     sub_err = _calculate_quality_contribution_2(dep_data_3d, par_est_3d, sigma_est)
 
-    sub_err_contrib = min(sub_err, 0.25)
-    top_err_contrib = top_err * 0.75
-    return 1.0 - (top_err_contrib + sub_err_contrib)
+    return QualityMeasure(
+        _aggregate_contributions(top_err.full, sub_err.full),
+        _aggregate_contributions(top_err.x_slice, sub_err.x_slice),
+        _aggregate_contributions(top_err.y_slice, sub_err.y_slice),
+        _aggregate_contributions(top_err.z_slice, sub_err.z_slice),
+    )
 
 
 def _calculate_quality_contribution_1(empirical_3d, parametric_3d, sigma_estimate):
     contrib1_cells = _find_contrib1_cells(empirical_3d, parametric_3d, sigma_estimate)
-    diff = empirical_3d[contrib1_cells] - parametric_3d[contrib1_cells]
-    worst_case = empirical_3d[contrib1_cells] - sigma_estimate
-    return np.abs(diff).sum() / np.abs(worst_case).sum()
+    return _calculate_quality_measure(
+        empirical_3d, parametric_3d, sigma_estimate, contrib1_cells, _contribution_1
+    )
 
 
 def _calculate_quality_contribution_2(empirical_3d, parametric_3d, sigma_estimate):
     contrib2_cells = _find_contrib2_cells(empirical_3d)
-    return np.median(np.abs(empirical_3d[contrib2_cells] - parametric_3d[contrib2_cells])) / sigma_estimate
+    return _calculate_quality_measure(
+        empirical_3d, parametric_3d, sigma_estimate, contrib2_cells, _contribution_2
+    )
+
+
+def _aggregate_contributions(top, sub):
+    return 1.0 - (top * 0.75 + min(sub, 0.25))
+
+
+def _contribution_1(empirical, parametric, sigma_estimate):
+    diff = empirical - parametric
+    worst_case = empirical - sigma_estimate
+    return np.abs(diff).sum() / np.abs(worst_case).sum()
+
+
+def _contribution_2(empirical, parametric, sigma_estimate):
+    return np.median(np.abs(empirical - parametric)) / sigma_estimate
+
+
+def _calculate_quality_measure(empirical_3d, parametric_3d, sigma_estimate, index, measure):
+    full = measure(empirical_3d[index], parametric_3d[index], sigma_estimate)
+
+    mx, my, mz = np.array(index.shape) // 2
+
+    ix = np.zeros_like(index, dtype=bool)
+    ix[:, my, mz] = 1
+    ix &= index
+    x = measure(empirical_3d[ix], parametric_3d[ix], sigma_estimate)
+
+    iy = np.zeros_like(index, dtype=bool)
+    iy[mx, :, mz] = 1
+    iy &= index
+    y = measure(empirical_3d[iy], parametric_3d[iy], sigma_estimate)
+
+    iz = np.zeros_like(index, dtype=bool)
+    iz[mx, my, :] = 1
+    iz &= index
+    z = measure(empirical_3d[iz], parametric_3d[iz], sigma_estimate)
+
+    return QualityMeasure(full, x, y, z)
 
 
 def _find_contrib1_cells(empirical_3d, parametric_3d, sigma_estimate, pc=0.5):

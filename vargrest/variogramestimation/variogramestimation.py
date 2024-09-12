@@ -6,7 +6,8 @@ from typing import Tuple, Optional, Dict, Callable, Union
 import numpy as np
 import matplotlib.figure as mpl_f
 
-from vargrest.auxiliary.curvefit import fit_3d_field, find_dominant_direction
+from vargrest.auxiliary.curvefit import fit_3d_field, find_dominant_direction, \
+    QualityMeasure
 from vargrest.variogramdata.variogramdata import VariogramDataInterface
 from vargrest.variogramestimation.parametricvariogram import AnisotropicVariogram, VariogramType
 from vargrest.variogramestimation.empiricalvariogram import _estimate_variogram_np_3d_dense,\
@@ -36,12 +37,11 @@ class NonparametricVariogramEstimate:
         return self._gridres
 
 
-
 class ParametricVariogramEstimate:
     def __init__(self, family: VariogramType,
                  nugget: bool,
                  params: dict,
-                 quality: float,
+                 quality: QualityMeasure,
                  ndims: int,
                  nonparest: NonparametricVariogramEstimate):
         super().__init__()
@@ -116,7 +116,7 @@ class ParametricVariogramEstimate:
         return self._family
 
     @property
-    def quality(self) -> float:
+    def quality(self) -> QualityMeasure:
         return self._quality
 
     def description(self) -> str:
