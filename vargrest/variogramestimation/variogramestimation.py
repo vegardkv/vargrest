@@ -15,13 +15,10 @@ from vargrest.variogramestimation.empiricalvariogram import _estimate_variogram_
 
 
 class NonparametricVariogramEstimate:
-    def __init__(self, varmap: np.ndarray, counts: np.ndarray,
-                 ndims: int, gridres: Tuple[float, float, float]):
+    def __init__(self, varmap: np.ndarray, counts: np.ndarray, gridres: Tuple[float, float, float]):
         super().__init__()
         self._varmap = varmap
         self._counts = counts
-        self._ndims = ndims
-        self._description = "{}D variogram map".format(ndims)
         self._gridres = gridres
 
     def variogram_map_values(self, normalized=False):
@@ -251,7 +248,7 @@ class VariogramEstimator:
             varmap, counts = _estimate_variogram_np_3d_sparse(self._data, lag_step_x, lag_step_y, lag_step_z)
         else:
             assert False
-        return NonparametricVariogramEstimate(varmap, counts, ndims=3, gridres=self._grid_resolution)
+        return NonparametricVariogramEstimate(varmap, counts, gridres=self._grid_resolution)
 
     def estimate_parametric_variogram_xyz(self,
                                           varmap: NonparametricVariogramEstimate,

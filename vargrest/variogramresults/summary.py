@@ -53,33 +53,23 @@ def summarize(pe: ParametricVariogramEstimate, meta_data: Dict[SummaryDataType, 
     return summary
 
 
-def conclude(vd: VariogramDataInterface,
-             ve: VariogramEstimator,
+def conclude(ve: VariogramEstimator,
              pe: ParametricVariogramEstimate,
              ne: NonparametricVariogramEstimate,
              qc_dir: str,
              fn_template: str,
              full_qc: bool
              ):
-    # Save crop box figure to file
-    vd.plot_crop_box(save_figure=True, dir_name=qc_dir, file_name=fn_template + "_crop_")
 
-    # Pickle variogram estimation data
     if full_qc is True:
+        # Pickle variogram estimation data
         pickle.dump((ve, ne), open(os.path.join(qc_dir, fn_template + '_data_.pkl'), 'wb'))
 
-    # Generate slice file
-    if full_qc is True:
+        # Generate slice file
         ve.generate_3d_slice_image(qc_dir, fn_template + '_slices_')
 
     # Save variogram map plots to file
     dump_variogram_plot(ve, ne, pe, qc_dir, fn_template)
-
-    # Save sliced variogram maps to file
-    sp = SlicePlot(*ne.variogram_map_values().shape, *ne.grid_resolution())
-    sp.add_non_parametric_estimate(ne)
-    sp.add_parametric_estimate(pe)
-    sp.fig.savefig(os.path.join(qc_dir, fn_template + '_variogram_slices_.png'))
 
 
 def dump_variogram_plot(ve: VariogramEstimator,
@@ -98,15 +88,15 @@ def dump_summaries_to_csv(summaries: List[ExecutionSummary], csv_file: str):
     csv_values = [s for s in SummaryDataType if s != SummaryDataType.Box]
     with open(csv_file, 'w') as writer:
         # Header
-        header = ''.join([f'{f.value:<14.14}' for f in csv_values])
+        header = ''.join([f'{f.value:<18.18}' for f in csv_values])
         writer.write(header.strip() + '\n')
 
         # Content
         def _formatter(_s):
             if isinstance(_s, float):
-                return f'{_s: 13.5}'
+                return f'{_s: <17.5}'
             else:
-                return f'{str(_s):<13.13}'
+                return f'{str(_s):<17.17}'
 
         for r in summaries:
             line = ' '.join([_formatter(r[f.value]) for f in csv_values])
