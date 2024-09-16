@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/equinor/vargrest/compare/v1.2.0...v1.2.1) (2024-09-16)
+
+
+### Bug Fixes
+
+* added test_data to gitignore ([6f015b4](https://github.com/equinor/vargrest/commit/6f015b4f23ac96726ff6ffb609262e613269af31))
+* changed np.float to float where neccesary ([c27c33d](https://github.com/equinor/vargrest/commit/c27c33ddd099caba8aac3a101adf57ddf60d0d23))
+
 ## [1.2.0](https://github.com/equinor/vargrest/compare/v1.1.1...v1.2.0) (2024-09-13)
 
 
