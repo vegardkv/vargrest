@@ -147,15 +147,15 @@ class VariogramDataInterface:
             param = _extract_parameter(rq, ijk, an)
         else:
             if isinstance(indicator, int):
-                param = np.logical_and(archel == indicator, ~np.isnan(archel)).astype(np.float)
+                param = np.logical_and(archel == indicator, ~np.isnan(archel)).astype(float)
             else:
                 assert isinstance(indicator, str)
                 # Currently, the following syntax is enforced:
                 # parameter<value
                 p, v = indicator.split('<')
                 pg = extract_property(rq, ijk, p, False)
-                arr = np.array(pg, dtype=np.float)
-                param = (np.where(np.isnan(arr), -np.inf, arr) > float(v)).astype(np.float)
+                arr = np.array(pg, dtype=float)
+                param = (np.where(np.isnan(arr), -np.inf, arr) > float(v)).astype(float)
 
         return VariogramDataInterface(xx[0, 0], yy[0, 0], dx, dy, box, pillars, param, archel)
 
