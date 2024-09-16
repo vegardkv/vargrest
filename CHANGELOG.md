@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/equinor/vargrest/compare/v1.1.1...v1.2.0) (2024-09-13)
+
+
+### Features
+
+* Add separate quality factors for xyz ([#9](https://github.com/equinor/vargrest/issues/9)) ([0e593ab](https://github.com/equinor/vargrest/commit/0e593abaf52fe18fced70ad173094dfee9651484))
+* Variogram plot update ([#11](https://github.com/equinor/vargrest/issues/11)) ([45c9386](https://github.com/equinor/vargrest/commit/45c9386d267ff5b7105d2ce8992ad6a1a537ef72))
+
 ## [1.1.1](https://github.com/equinor/vargrest/compare/v1.1.0...v1.1.1) (2024-09-02)
 
 
